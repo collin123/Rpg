@@ -1,0 +1,6 @@
+# Sprites
+*.png
+# Python bytecode
+*.py[co]
+# Tiled files
+*.tmx
