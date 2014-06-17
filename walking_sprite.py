@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 import spyral
+import pygame
+
+import renderer
 
 SIZE = (640, 480)
 BG_COLOR = (0, 0, 0)
@@ -36,9 +39,17 @@ class Game(spyral.Scene):
 	"""
 	sprite_file = 'EchFF.png'
 	sprite_offset = ((32 * 3), 126 + (32 * 4))
+	map_file = 'map.tmx'
 	def __init__(self):
 		spyral.Scene.__init__(self, SIZE)
-		self.background = spyral.Image(size=SIZE).fill(BG_COLOR)
+		# START LOAD RENDERER
+		self.renderer = renderer.TiledRenderer(self.map_file)
+		background = spyral.Image(size=self.renderer.size)
+		self.renderer.render(background._surf)
+		background.scale(SIZE)
+		self.background = background
+		# END LOAD RENDERER
+
 		spyral.event.register("system.quit", spyral.director.quit)
 
 		self.player_sprite = spyral.Sprite(self)
