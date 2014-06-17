@@ -2,12 +2,24 @@ import pygame
 import pytmx
 
 class TiledRenderer(object):
+	"""
+	Renders tiled tmx files.
+	"""
 	def __init__(self, filename):
+		"""
+		:param str filename: The file you want to renderer.
+		"""
 		tm = pytmx.load_pygame(filename, pixelalpha=True)
 		self.size = tm.width * tm.tilewidth, tm.height * tm.tileheight
 		self.tmx_data = tm
 
 	def render(self, surface):
+		"""
+		Renders a tmx file type into a image. It expects the surface to
+		be the size of the renderer
+
+		:param pygame.Surface surface: The surface you want to be loaded.
+		"""
 		tw = self.tmx_data.tilewidth
 		th = self.tmx_data.tileheight
 		if self.tmx_data.background_color:
