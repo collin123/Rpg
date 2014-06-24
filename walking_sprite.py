@@ -61,6 +61,17 @@ class Game(spyral.Scene):
 		spyral.event.register('input.keyboard.down.left', lambda: self.move_player('left'))
 		spyral.event.register('input.keyboard.down.right', lambda: self.move_player('right'))
 
+	def position_in_scene(self, position):
+		if position.x >= SIZE[0]:
+			return False
+		elif position.y >= SIZE[1]:
+			return False
+		elif position.x < 0:
+			return False
+		elif position.y < 0:
+			return False
+		return True
+
 	def move_player(self, direction):
 		self.player_sprite.stop_all_animations()
 		walking_animation = load_walking_animation(self.sprite_file, direction, self.sprite_offset)
@@ -68,13 +79,19 @@ class Game(spyral.Scene):
 		pos = self.player_sprite.pos
 		if direction == 'down':
 			move_animation = spyral.Animation('y', spyral.easing.Linear(pos.y, pos.y + 32), 0.5)
+			new_pos = spyral.Vec2D(pos.x, pos.y + 32)
 		elif direction == 'up':
 			move_animation = spyral.Animation('y', spyral.easing.Linear(pos.y, pos.y - 32), 0.5)
+			new_pos = spyral.Vec2D(pos.x, pos.y - 32)
 		elif direction == 'left':
 			move_animation = spyral.Animation('x', spyral.easing.Linear(pos.x,  pos.x - 32), 0.5)
+			new_pos = spyral.Vec2D(pos.x - 32, pos.y)
 		elif direction == 'right':
 			move_animation = spyral.Animation('x', spyral.easing.Linear(pos.x,  pos.x + 32), 0.5)
-		self.player_sprite.animate(walking_animation & move_animation)
+			new_pos = spyral.Vec2D(pos.x + 32, pos.y)
+		print('X ' + str(pos.x) + ' Y ' + str(pos.y))
+		if self.position_in_scene(new_pos):
+			self.player_sprite.animate(walking_animation & move_animation)
 
 if __name__ == "__main__":
 	spyral.director.init(SIZE)
