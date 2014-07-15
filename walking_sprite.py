@@ -4,8 +4,9 @@ import pygame
 
 import renderer
 
-SIZE = (640, 480)
+SIZE = (640, 640)
 BG_COLOR = (0, 0, 0)
+STEP_INTERVAL = 0.2
 
 def load_walking_animation(filename, direction, offset=None, size=None):
 	offset = (offset or (0, 0))
@@ -74,24 +75,34 @@ class Game(spyral.Scene):
 
 	def move_player(self, direction):
 		self.player_sprite.stop_all_animations()
-		walking_animation = load_walking_animation(self.sprite_file, direction, self.sprite_offset)
-
 		pos = self.player_sprite.pos
+		scale_height = float(self.background.size.y) / float(self.renderer.size[1])
+		scale_width = float(self.background.size.x) / float(self.renderer.size[0])
+		tile_height = int(self.renderer.tmx_data.tileheight * scale_height)
+		tile_width = int(self.renderer.tmx_data.tilewidth * scale_width)
+
 		if direction == 'down':
-			move_animation = spyral.Animation('y', spyral.easing.Linear(pos.y, pos.y + 32), 0.5)
-			new_pos = spyral.Vec2D(pos.x, pos.y + 32)
+			move_animation = spyral.Animation('y', spyral.easing.Linear(pos.y, pos.y + tile_height), STEP_INTERVAL)
+			new_pos = spyral.Vec2D(pos.x, pos.y + tile_height)
 		elif direction == 'up':
-			move_animation = spyral.Animation('y', spyral.easing.Linear(pos.y, pos.y - 32), 0.5)
-			new_pos = spyral.Vec2D(pos.x, pos.y - 32)
+			move_animation = spyral.Animation('y', spyral.easing.Linear(pos.y, pos.y - tile_height), STEP_INTERVAL)
+			new_pos = spyral.Vec2D(pos.x, pos.y - tile_height)
 		elif direction == 'left':
-			move_animation = spyral.Animation('x', spyral.easing.Linear(pos.x,  pos.x - 32), 0.5)
-			new_pos = spyral.Vec2D(pos.x - 32, pos.y)
+			move_animation = spyral.Animation('x', spyral.easing.Linear(pos.x,  pos.x - tile_width), STEP_INTERVAL)
+			new_pos = spyral.Vec2D(pos.x - tile_width, pos.y)
 		elif direction == 'right':
-			move_animation = spyral.Animation('x', spyral.easing.Linear(pos.x,  pos.x + 32), 0.5)
-			new_pos = spyral.Vec2D(pos.x + 32, pos.y)
-		print('X ' + str(pos.x) + ' Y ' + str(pos.y))
-		if self.position_in_scene(new_pos):
-			self.player_sprite.animate(walking_animation & move_animation)
+			move_animation = spyral.Animation('x', spyral.easing.Linear(pos.x,  pos.x + tile_width), STEP_INTERVAL)
+			new_pos = spyral.Vec2D(pos.x + tile_width, pos.y)
+
+		if not self.position_in_scene(new_pos):
+			return
+
+		properties = self.renderer.get_tile_properties(int(float(new_pos.x)/scale_width), int(float(new_pos.y)/scale_height))
+		if properties.get('collision', False):
+			return
+
+		walking_animation = load_walking_animation(self.sprite_file, direction, self.sprite_offset)
+		self.player_sprite.animate(walking_animation & move_animation)
 
 if __name__ == "__main__":
 	spyral.director.init(SIZE)

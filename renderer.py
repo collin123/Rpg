@@ -12,6 +12,18 @@ class TiledRenderer(object):
 		tm = pytmx.load_pygame(filename, pixelalpha=True)
 		self.size = tm.width * tm.tilewidth, tm.height * tm.tileheight
 		self.tmx_data = tm
+		self.tmx_layers = tm.all_layers
+
+	def get_objects_for_position(self, x, y):
+		"""
+		Finds objects in the position the player will move to
+		"""
+		pass
+
+	def get_tile_properties(self, x, y, layer=0):
+		x = x / self.tmx_data.tilewidth
+		y = y / self.tmx_data.tileheight
+		return self.tmx_data.getTileProperties((x, y, layer)) or {}
 
 	def render(self, surface):
 		"""
@@ -30,7 +42,7 @@ class TiledRenderer(object):
 					tile = self.tmx_data.getTileImageByGid(gid)
 					if tile:
 						surface.blit(tile, (x * tw, y * th))
-			elif isinstance(layer, TiledImageLayer):
+			elif isinstance(layer, pytmx.TiledImageLayer):
 				image = self.tmx_data.getTileImageByGid(layer.gid)
 				if image:
 					surface.blit(image, (0, 0))
