@@ -93,16 +93,15 @@ class Game(spyral.Scene):
 		elif direction == 'right':
 			move_animation = spyral.Animation('x', spyral.easing.Linear(pos.x,  pos.x + tile_width), STEP_INTERVAL)
 			new_pos = spyral.Vec2D(pos.x + tile_width, pos.y)
-
-		if not self.position_in_scene(new_pos):
-			return
-
 		properties = self.renderer.get_tile_properties(int(float(new_pos.x)/scale_width), int(float(new_pos.y)/scale_height))
-		if properties.get('collision', False):
-			return
+		if properties.get('collision', False) or self.position_in_scene(new_pos) == False:
+			walking_animation = load_walking_animation(self.sprite_file, direction, self.sprite_offset)
+			self.player_sprite.animate(walking_animation)
+		else:
+			walking_animation = load_walking_animation(self.sprite_file, direction, self.sprite_offset)
+			self.player_sprite.animate(walking_animation & move_animation)
 
-		walking_animation = load_walking_animation(self.sprite_file, direction, self.sprite_offset)
-		self.player_sprite.animate(walking_animation & move_animation)
+
 
 if __name__ == "__main__":
 	spyral.director.init(SIZE)
