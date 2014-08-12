@@ -3,10 +3,12 @@ import spyral
 import pygame
 
 import renderer
+import threading
+import time
 
 SIZE = (640, 640)
 BG_COLOR = (0, 0, 0)
-STEP_INTERVAL = 0.2
+STEP_INTERVAL = 0.25
 
 def load_walking_animation(filename, direction, offset=None, size=None):
 	offset = (offset or (0, 0))
@@ -31,14 +33,14 @@ def load_walking_animation(filename, direction, offset=None, size=None):
 	img.crop(((size[0] * 1) + offset[0], offset[1] + direction), size)
 	walking_images.append(img)
 
-	return spyral.Animation('image', spyral.easing.Iterate(walking_images), 0.5, loop=False)
+	return spyral.Animation('image', spyral.easing.Iterate(walking_images), STEP_INTERVAL, loop=False)
 
 class Game(spyral.Scene):
 	"""
 	A Scene represents a distinct state of your game. They could be menus,
 	different subgames, or any other things which are mostly distinct.
 	"""
-	sprite_file = 'EchFF.png'
+	sprite_file = 'sprites/player.png'
 	sprite_offset = ((32 * 3), 126 + (32 * 4))
 	map_file = 'map.tmx'
 	def __init__(self):
@@ -49,6 +51,7 @@ class Game(spyral.Scene):
 		self.renderer.render(background._surf)
 		background.scale(SIZE)
 		self.background = background
+		self.player_animation_lock = threading.RLock()
 		# END LOAD RENDERER
 
 		spyral.event.register("system.quit", spyral.director.quit)
@@ -74,7 +77,10 @@ class Game(spyral.Scene):
 		return True
 
 	def move_player(self, direction):
-		self.player_sprite.stop_all_animations()
+		if not self.player_animation_lock.acquire(blocking=False):
+			return
+		#self.player_animation_lock.acquire()
+		#self.player_sprite.stop_all_animations()
 		pos = self.player_sprite.pos
 		scale_height = float(self.background.size.y) / float(self.renderer.size[1])
 		scale_width = float(self.background.size.x) / float(self.renderer.size[0])
@@ -93,13 +99,30 @@ class Game(spyral.Scene):
 		elif direction == 'right':
 			move_animation = spyral.Animation('x', spyral.easing.Linear(pos.x,  pos.x + tile_width), STEP_INTERVAL)
 			new_pos = spyral.Vec2D(pos.x + tile_width, pos.y)
+		try:
+			assert(new_pos.x % self.renderer.tmx_data.tilewidth == 0)
+			assert(new_pos.y % self.renderer.tmx_data.tileheight == 0)
+		except AssertionError:
+			import pdb; pdb.set_trace()
 		properties = self.renderer.get_tile_properties(int(float(new_pos.x)/scale_width), int(float(new_pos.y)/scale_height))
-		if properties.get('collision', False) or self.position_in_scene(new_pos) == False:
-			walking_animation = load_walking_animation(self.sprite_file, direction, self.sprite_offset)
-			self.player_sprite.animate(walking_animation)
+		walking_animation = load_walking_animation(self.sprite_file, direction, self.sprite_offset)
+		if not properties.get('collision', False) and self.position_in_scene(new_pos):
+			walking_animation = (walking_animation & move_animation)
+
+		event_name = None
+		if 'x' in walking_animation.properties:
+			event_name = self.player_sprite.__class__.__name__ + '.x.animation.end'
+		elif 'y' in walking_animation.properties:
+			event_name = self.player_sprite.__class__.__name__ + '.y.animation.end'
+		if event_name:
+			def test_function(*args, **kwargs):
+				self.player_animation_lock.release()
+				spyral.event.unregister(event_name, test_function)
+			spyral.event.register(event_name, test_function)
 		else:
-			walking_animation = load_walking_animation(self.sprite_file, direction, self.sprite_offset)
-			self.player_sprite.animate(walking_animation & move_animation)
+			self.player_animation_lock.release()
+		self.player_sprite.animate(walking_animation)
+
 
 
 if __name__ == "__main__":
