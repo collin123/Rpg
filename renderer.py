@@ -7,7 +7,7 @@ class TiledRenderer(object):
 	"""
 	def __init__(self, filename):
 		"""
-		:param str filename: The file you want to renderer.
+		:param str filename: The name of the file you want to renderer.
 		"""
 		tm = pytmx.load_pygame(filename, pixelalpha=True)
 		self.size = tm.width * tm.tilewidth, tm.height * tm.tileheight

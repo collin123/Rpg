@@ -102,7 +102,6 @@ class Game(spyral.Scene):
 			self.player_sprite.animate(walking_animation & move_animation)
 
 
-
 if __name__ == "__main__":
 	spyral.director.init(SIZE)
 	spyral.director.run(scene=Game())
