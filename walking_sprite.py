@@ -5,6 +5,7 @@ import pygame
 import renderer
 import threading
 import time
+import os
 
 SIZE = (640, 640)
 BG_COLOR = (0, 0, 0)
@@ -123,8 +124,10 @@ class Game(spyral.Scene):
 			self.player_animation_lock.release()
 		self.player_sprite.animate(walking_animation)
 
-
-
 if __name__ == "__main__":
+	#import pdb; pdb.set_trace()
+	directory =  os.path.dirname(__file__)
+	if directory:
+		os.chdir(directory)
 	spyral.director.init(SIZE)
 	spyral.director.run(scene=Game())
