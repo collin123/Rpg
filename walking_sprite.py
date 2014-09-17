@@ -52,7 +52,9 @@ class Game(spyral.Scene):
 		self.renderer.render(background._surf)
 		background.scale(SIZE)
 		self.background = background
-		self.player_animation_lock = threading.RLock()
+		self.scale_height = float(self.background.size.y) / float(self.renderer.size[1])
+		self.scale_width = float(self.background.size.x) / float(self.renderer.size[0])
+		self.player_animation_lock = threading.Lock()
 		# END LOAD RENDERER
 
 		spyral.event.register("system.quit", spyral.director.quit)
@@ -61,10 +63,20 @@ class Game(spyral.Scene):
 		walking_animation = load_walking_animation(self.sprite_file, 'down', self.sprite_offset)
 		self.player_sprite.animate(walking_animation)
 
+		# spyral built in events
 		spyral.event.register('input.keyboard.down.down', lambda: self.move_player('down'))
 		spyral.event.register('input.keyboard.down.up', lambda: self.move_player('up'))
 		spyral.event.register('input.keyboard.down.left', lambda: self.move_player('left'))
 		spyral.event.register('input.keyboard.down.right', lambda: self.move_player('right'))
+
+		# custom events
+		spyral.event.register('rpg.map.collision', self.handle_map_collision)
+
+	def handle_map_collision(self, event):
+		pos = event.pos
+		new_pos = event.new_pos
+		properties = self.get_renderer_tile_properties(new_pos)
+		print("Player position {0}, {1}".format(pos[0], pos[1]))
 
 	def position_in_scene(self, position):
 		if position.x >= SIZE[0]:
@@ -77,16 +89,18 @@ class Game(spyral.Scene):
 			return False
 		return True
 
+	def get_renderer_tile_properties(self, pos):
+		properties = self.renderer.get_tile_properties(int(float(pos.x)/self.scale_width), int(float(pos.y)/self.scale_height))
+		return properties
+
 	def move_player(self, direction):
-		if not self.player_animation_lock.acquire(blocking=False):
+		if not self.player_animation_lock.acquire(False):
 			return
 		#self.player_animation_lock.acquire()
 		#self.player_sprite.stop_all_animations()
 		pos = self.player_sprite.pos
-		scale_height = float(self.background.size.y) / float(self.renderer.size[1])
-		scale_width = float(self.background.size.x) / float(self.renderer.size[0])
-		tile_height = int(self.renderer.tmx_data.tileheight * scale_height)
-		tile_width = int(self.renderer.tmx_data.tilewidth * scale_width)
+		tile_height = int(self.renderer.tmx_data.tileheight * self.scale_height)
+		tile_width = int(self.renderer.tmx_data.tilewidth * self.scale_width)
 
 		if direction == 'down':
 			move_animation = spyral.Animation('y', spyral.easing.Linear(pos.y, pos.y + tile_height), STEP_INTERVAL)
@@ -105,10 +119,14 @@ class Game(spyral.Scene):
 			assert(new_pos.y % self.renderer.tmx_data.tileheight == 0)
 		except AssertionError:
 			import pdb; pdb.set_trace()
-		properties = self.renderer.get_tile_properties(int(float(new_pos.x)/scale_width), int(float(new_pos.y)/scale_height))
+		properties = self.get_renderer_tile_properties(new_pos)
 		walking_animation = load_walking_animation(self.sprite_file, direction, self.sprite_offset)
-		if not properties.get('collision', False) and self.position_in_scene(new_pos):
-			walking_animation = (walking_animation & move_animation)
+		if self.position_in_scene(new_pos):
+			if properties.get('collision'):
+				collision_event = spyral.Event(pos = pos, new_pos = new_pos)
+				spyral.event.handle('rpg.map.collision', event = collision_event)
+			else:
+				walking_animation = (walking_animation & move_animation)
 
 		event_name = None
 		if 'x' in walking_animation.properties:
@@ -122,7 +140,12 @@ class Game(spyral.Scene):
 			spyral.event.register(event_name, test_function)
 		else:
 			self.player_animation_lock.release()
-		self.player_sprite.animate(walking_animation)
+		try:
+			self.player_sprite.animate(walking_animation)
+		except ValueError:
+			if event_name:
+				self.player_animation_lock.release()
+				spyral.event.unregister(event_name, test_function)
 
 if __name__ == "__main__":
 	#import pdb; pdb.set_trace()
